@@ -1,0 +1,21 @@
+{
+  "name": "jfrog-github-app",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "start": "tsc && node dist/app.js",
+    "build": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "standard": "^17.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@octokit/auth-app": "^7.1.1",
+    "@octokit/webhooks": "^13.3.0",
+    "dotenv": "^16.4.5",
+    "octokit": "3.1.2"
+  }
+}
