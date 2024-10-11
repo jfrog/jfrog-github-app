@@ -1,7 +1,8 @@
+
 import { Octokit } from 'octokit';
-import {GitHubRepo} from "../utils/types";
-import {PULL_REQUEST_DATA} from "../utils/consts";
-export class FrogbotService {
+import {GitHubRepo} from "../utils/types.js";
+import {PULL_REQUEST_DATA} from "../utils/consts.js";
+ export class FrogbotService {
     private readonly octokit: Octokit;
     constructor(octokit : Octokit) {
         this.octokit = octokit;
@@ -125,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: frogbot
     steps:
-      - uses: jfrog/frogbot@v2.21.13
+      - uses: jfrog/frogbot@v2
         env:
           JF_URL: \${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: \${{ secrets.JF_TOKEN }}
@@ -137,8 +138,6 @@ jobs:
         return `name: "Frogbot Scan Repository"
 on:
   push:
-    branches:
-      - "${PULL_REQUEST_DATA.branchName}"
   workflow_dispatch:
   repository_dispatch:
     types:
@@ -158,9 +157,8 @@ jobs:
       matrix:
         branch: [ "${defaultBranch}" ]
     steps:
-      - uses: jfrog/frogbot@v2.21.13
+      - uses: jfrog/frogbot@v2
         env:
-          JFROG_CLI_LOG_LEVEL: "DEBUG"
           JF_URL: \${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: \${{ secrets.JF_TOKEN }}
           JF_GIT_TOKEN: \${{ secrets.GITHUB_TOKEN }}

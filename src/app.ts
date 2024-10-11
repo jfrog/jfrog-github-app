@@ -3,10 +3,9 @@ import fs from 'fs';
 import http from 'http';
 import { App } from 'octokit';
 import { createNodeMiddleware, EmitterWebhookEvent } from '@octokit/webhooks';
-import { WebhookEventHandlerError } from '@octokit/webhooks/dist-types/types';
-import {FrogbotService} from "./services/FrogbotService";
-import {GitHubRepo} from "./utils/types";
-import {webhookEvents} from "./utils/consts";
+import {FrogbotService} from "./services/FrogbotService.js";
+import {GitHubRepo} from "./utils/types.js";
+import {webhookEvents} from "./utils/consts.js";
 
 dotenv.config();
 
@@ -38,9 +37,6 @@ app.webhooks.on(webhookEvents.ADD_REPOSITORIES, async ({ payload }: EmitterWebho
   }
 });
 
-app.webhooks.onError((error: WebhookEventHandlerError) => {
-  console.error('Error processing webhook:', error);
-});
 
 const port: number = parseInt(process.env.PORT || '3000', 10);
 const path = '/api/webhook';
