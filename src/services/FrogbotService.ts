@@ -117,6 +117,12 @@ export class FrogbotService {
 
     private pullRequestWorkflow(): string {
         return `Name: Frogbot pull request scan"
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+permissions:
+  pull-requests: write
+  contents: read
 jobs:
   scan-pull-request:
     runs-on: ubuntu-latest
