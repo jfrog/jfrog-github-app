@@ -78,16 +78,13 @@ export class FrogbotService {
 
     private async addFrogbotWorkflows(owner: string, repo: string, defaultBranch: string) {
         try {
-            const scanRepoWorkflow = this.scanRepositoryWorkflow(defaultBranch);
-            const pullRequestWorkflow = this.pullRequestWorkflow();
-
             await Promise.all([
                 this.octokit.rest.repos.createOrUpdateFileContents({
                     owner,
                     repo,
                     path: '.github/workflows/frogbot-scan-repository.yml',
                     message: `Added frogbot-scan-repository.yml on ${PULL_REQUEST_DATA.branchName}`,
-                    content: Buffer.from(scanRepoWorkflow).toString('base64'),
+                    content: Buffer.from(this.scanRepositoryWorkflow(defaultBranch)).toString('base64'),
                     branch: PULL_REQUEST_DATA.branchName,
                 }),
                 this.octokit.rest.repos.createOrUpdateFileContents({
@@ -95,7 +92,7 @@ export class FrogbotService {
                     repo,
                     path: '.github/workflows/frogbot-scan-pull-request.yml',
                     message: `Added frogbot-scan-pull-request.yml on ${PULL_REQUEST_DATA.branchName}`,
-                    content: Buffer.from(pullRequestWorkflow).toString('base64'),
+                    content: Buffer.from(this.pullRequestWorkflow()).toString('base64'),
                     branch: PULL_REQUEST_DATA.branchName,
                 }),
             ]);
