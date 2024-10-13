@@ -6,10 +6,9 @@
     "noImplicitAny": true,
     "moduleResolution": "node16",
     "experimentalDecorators": true,
-    "allowImportingTsExtensions": true,
     "emitDecoratorMetadata": true,
-    "emitDeclarationOnly": true,
-    "declaration": true,           // Add this line
+    "emitDeclarationOnly": false,
+    "declaration": true,
     "sourceMap": true,
     "outDir": "dist",
     "baseUrl": ".",

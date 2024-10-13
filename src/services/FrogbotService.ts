@@ -2,6 +2,8 @@
 import { Octokit } from 'octokit';
 import {GitHubRepo} from "../utils/types.js";
 import {PULL_REQUEST_DATA} from "../utils/consts.js";
+import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
+
  export class FrogbotService {
     private readonly octokit: Octokit;
     constructor(octokit : Octokit) {
@@ -30,18 +32,53 @@ import {PULL_REQUEST_DATA} from "../utils/consts.js";
         }
     }
 
-    private async setUpFrogbotEnvironment(owner: string, repo: string) {
-        //TODO: add reviewers funcionality
-        try {
-            await this.octokit.rest.repos.createOrUpdateEnvironment({
-                owner,
-                repo,
-                environment_name: "frogbot"
-            });
-        } catch (error) {
-            console.error('Error adding maintainers to environment:', error);
-        }
-    }
+     private async setUpFrogbotEnvironment(owner: string, repo: string) {
+         try {
+             const collaborators = await this.octokit.rest.repos.listCollaborators({
+                 owner,
+                 repo,
+                 affiliation: 'direct',
+                 permission: 'maintain',
+             });
+
+             console.log(collaborators);
+
+             const allTeamsResponse = await this.octokit.rest.teams.list({
+                 org: owner,
+             });
+
+             const teamPromises = allTeamsResponse.data.map(async (team) => {
+                 const permissionResponse = await this.octokit.rest.teams.checkPermissionsForRepoInOrg({
+                     org: owner,
+                     team_slug: team.slug,
+                     owner,
+                     repo,
+                 });
+                 if (permissionResponse.data.permissions.admin || permissionResponse.data.permissions.maintain) {
+                     return team.slug;
+                 }
+                 return null;
+             });
+
+             // Await all promises and filter out null values
+             const teams = (await Promise.all(teamPromises)).filter((teamSlug) => teamSlug !== null).slice(0, 6);
+
+             await this.octokit.rest.repos.createOrUpdateEnvironment({
+                 owner,
+                 repo,
+                 environment_name: 'frogbot',
+                 protection_rules: {
+                     reviewers: [ ...teams,
+                         ...collaborators.data.map((collab) => collab.login),
+                     ].slice(0, 6),
+                 },
+             });
+
+         } catch (error) {
+             console.error('Error creating Frogbot environment with reviewers:', error);
+         }
+     }
+
 
     private async allowWorkflows(owner: string, repo: string) {
 
@@ -85,7 +122,7 @@ import {PULL_REQUEST_DATA} from "../utils/consts.js";
                     repo,
                     path: '.github/workflows/frogbot-scan-repository.yml',
                     message: `Added frogbot-scan-repository.yml on ${PULL_REQUEST_DATA.branchName}`,
-                    content: Buffer.from(this.scanRepositoryWorkflow(defaultBranch)).toString('base64'),
+                    content: Buffer.from(scanRepositoryWorkflow(defaultBranch)).toString('base64'),
                     branch: PULL_REQUEST_DATA.branchName,
                 }),
                 this.octokit.rest.repos.createOrUpdateFileContents({
@@ -93,7 +130,7 @@ import {PULL_REQUEST_DATA} from "../utils/consts.js";
                     repo,
                     path: '.github/workflows/frogbot-scan-pull-request.yml',
                     message: `Added frogbot-scan-pull-request.yml on ${PULL_REQUEST_DATA.branchName}`,
-                    content: Buffer.from(this.pullRequestWorkflow()).toString('base64'),
+                    content: Buffer.from(pullRequestWorkflow()).toString('base64'),
                     branch: PULL_REQUEST_DATA.branchName,
                 }),
             ]);
@@ -111,57 +148,5 @@ import {PULL_REQUEST_DATA} from "../utils/consts.js";
             title: PULL_REQUEST_DATA.prTitle,
             body: PULL_REQUEST_DATA.comment,
         });
-    }
-
-    private pullRequestWorkflow(): string {
-        return `Name: Frogbot pull request scan"
-on:
-  pull_request_target:
-    types: [opened, synchronize]
-permissions:
-  pull-requests: write
-  contents: read
-jobs:
-  scan-pull-request:
-    runs-on: ubuntu-latest
-    environment: frogbot
-    steps:
-      - uses: jfrog/frogbot@v2
-        env:
-          JF_URL: \${{ secrets.JF_URL }}
-          JF_ACCESS_TOKEN: \${{ secrets.JF_TOKEN }}
-          JF_GIT_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-`;
-    }
-
-    private scanRepositoryWorkflow(defaultBranch: string): string {
-        return `name: "Frogbot Scan Repository"
-on:
-  push:
-  workflow_dispatch:
-  repository_dispatch:
-    types:
-      - trigger-frogbot-scan
-  schedule:
-    - cron: "0 0 * * *"
-
-permissions:
-  contents: write
-  pull-requests: write
-  security-events: write
-
-jobs:
-  scan-repository:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        branch: [ "${defaultBranch}" ]
-    steps:
-      - uses: jfrog/frogbot@v2
-        env:
-          JF_URL: \${{ secrets.JF_URL }}
-          JF_ACCESS_TOKEN: \${{ secrets.JF_TOKEN }}
-          JF_GIT_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          JF_GIT_BASE_BRANCH: \${{ matrix.branch }}`;
     }
 }
