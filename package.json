@@ -4,19 +4,34 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "start": "tsc && node dist/app.js",
+    "start": "tsc -p ./ && node dist/app.js",
     "build": "tsc -p ./"
   },
   "devDependencies": {
-    "@types/node": "^22.7.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/libsodium-wrappers": "^0.7.14",
+    "@types/node": "^22.7.5",
+    "@types/send": "^0.17.4",
+    "@types/serve-static": "^1.15.7",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.12",
     "standard": "^17.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
   },
   "dependencies": {
+    "@octokit/app": "^15.1.0",
     "@octokit/auth-app": "^7.1.1",
+    "@octokit/rest": "^21.0.2",
     "@octokit/webhooks": "^13.3.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "octokit": "^4.0.2"
+    "express": "^4.21.1",
+    "jfrog-client-js": "^2.8.0",
+    "libsodium-wrappers": "^0.7.15",
+    "octokit": "^4.0.2",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
   }
 }

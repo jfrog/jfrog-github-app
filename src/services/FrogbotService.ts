@@ -1,7 +1,8 @@
 
 import { Octokit } from 'octokit';
-import {GitHubRepo} from "../utils/types.js";
+import {GitHubRepo, InstallationResult} from "../utils/types.js";
 import {PULL_REQUEST_DATA} from "../utils/consts.js";
+import { v4 as uuidv4 } from 'uuid';
 import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
 
  export class FrogbotService {
@@ -10,8 +11,13 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         this.octokit = octokit;
     }
 
-    public async installFrogbot(repo: GitHubRepo) {
+    public async installFrogbot(repo: GitHubRepo): Promise<InstallationResult> {
+        const result : InstallationResult = {
+            repoName:repo.name,
+        };
         const owner = repo.full_name.split('/')[0];
+        const sourceBranch = PULL_REQUEST_DATA.branchName + "-" + uuidv4();
+
         try {
             const { data: repoData } = await this.octokit.rest.repos.get({
                 repo: repo.name,
@@ -22,11 +28,12 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
             await Promise.all([
                 this.allowWorkflows(owner, repo.name),
                 !repo.private ? this.setUpFrogbotEnvironment( owner, repo.name) : Promise.resolve(),
-                this.createBranch(owner, repo.name, defaultBranch)
+                this.createBranch(owner, repo.name, defaultBranch, sourceBranch)
             ]);
 
-            await this.addFrogbotWorkflows(owner, repo.name, defaultBranch);
-            await this.openPullRequest(owner, repo.name, defaultBranch);
+            await this.addFrogbotWorkflows(owner, repo.name, defaultBranch, sourceBranch);
+           result.prLink = await this.openPullRequest(owner, repo.name, defaultBranch, sourceBranch);
+           return result;
         } catch (error) {
             throw error;
         }
@@ -61,7 +68,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
              });
 
              // Await all promises and filter out null values
-             const teams = (await Promise.all(teamPromises)).filter((teamSlug) => teamSlug !== null).slice(0, 6);
+             const teams = (await Promise.all(teamPromises)).filter((teamSlugs : string) => teamSlugs !== null).slice(0, 6);
 
              await this.octokit.rest.repos.createOrUpdateEnvironment({
                  owner,
@@ -93,7 +100,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         }
     }
 
-    private async createBranch(owner: string, repo: string, defaultBranch: string) {
+    private async createBranch(owner: string, repo: string, defaultBranch: string, sourceBranch : string) {
         try {
             const { data: refData } = await this.octokit.rest.git.getRef({
                 owner,
@@ -102,7 +109,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
             });
 
             const latestCommitSha = refData.object.sha;
-            const newBranchRef = `refs/heads/${PULL_REQUEST_DATA.branchName}`;
+            const newBranchRef = `refs/heads/${sourceBranch}`;
             await this.octokit.rest.git.createRef({
                 owner,
                 repo,
@@ -114,24 +121,24 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         }
     }
 
-    private async addFrogbotWorkflows(owner: string, repo: string, defaultBranch: string) {
+    private async addFrogbotWorkflows(owner: string, repo: string, defaultBranch: string, sourceBranch : string) {
         try {
             await Promise.all([
                 this.octokit.rest.repos.createOrUpdateFileContents({
                     owner,
                     repo,
                     path: '.github/workflows/frogbot-scan-repository.yml',
-                    message: `Added frogbot-scan-repository.yml on ${PULL_REQUEST_DATA.branchName}`,
+                    message: `Added frogbot-scan-repository.yml on ${sourceBranch}`,
                     content: Buffer.from(scanRepositoryWorkflow(defaultBranch)).toString('base64'),
-                    branch: PULL_REQUEST_DATA.branchName,
+                    branch: sourceBranch,
                 }),
                 this.octokit.rest.repos.createOrUpdateFileContents({
                     owner,
                     repo,
                     path: '.github/workflows/frogbot-scan-pull-request.yml',
-                    message: `Added frogbot-scan-pull-request.yml on ${PULL_REQUEST_DATA.branchName}`,
+                    message: `Added frogbot-scan-pull-request.yml on ${sourceBranch}`,
                     content: Buffer.from(pullRequestWorkflow()).toString('base64'),
-                    branch: PULL_REQUEST_DATA.branchName,
+                    branch: sourceBranch
                 }),
             ]);
         } catch (error) {
@@ -139,14 +146,15 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         }
     }
 
-    private async openPullRequest(owner: string, repo: string, defaultBranch: string) {
-        await this.octokit.rest.pulls.create({
+    private async openPullRequest(owner: string, repo: string, defaultBranch: string, sourceBranch : string):Promise<string> {
+        const response = await this.octokit.rest.pulls.create({
             owner,
             repo,
-            head: PULL_REQUEST_DATA.branchName,
+            head: sourceBranch,
             base: defaultBranch,
             title: PULL_REQUEST_DATA.prTitle,
             body: PULL_REQUEST_DATA.comment,
         });
+        return response.data.html_url;
     }
 }
