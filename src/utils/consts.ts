@@ -9,5 +9,4 @@ export const PULL_REQUEST_DATA = {
 
 export enum webhookEvents {
     ADD_REPOSITORIES = "installation_repositories",
-    INSTALL_APP = "installation",
 }

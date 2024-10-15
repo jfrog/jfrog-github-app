@@ -3,7 +3,6 @@ import {Octokit} from "octokit";
 import sodium from 'libsodium-wrappers';
 import {JfrogClient} from "jfrog-client-js";
 import {FrogbotService} from "./FrogbotService.js";
-import {WebSocket} from "ws";
 import {WebSocketService} from "./WebsocketService.js";
 
 export class SetupService{
@@ -17,70 +16,63 @@ export class SetupService{
         this.ws = websocket;
     }
 
-    public async submitSetupForm(platformUrl: string, accessToken: string, installationId : number)  {
-        let isConnected = false;
-        this.ws.sendMessageToClient(installationId,JSON.stringify({ status: 'validating credentials'}));
+    public async submitSetupForm(platformUrl: string, accessToken: string, installationId: number) {
+        this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'validating credentials' }));
 
         const jfrogClient = new JfrogClient({
             platformUrl,
             accessToken,
-            retryDelay: 1000
-        })
+        });
+
+        // Validate credentials by pinging the JFrog system
         try {
-            await jfrogClient
-                .xray()
-                .system()
-                .ping()
-                .then((result : any) => {
-                    if(result.status === 'pong')
-                        isConnected = true;
-                })
-                .catch((error) => {
-                    console.error(error);
-                });
-            if (isConnected) {
-                try {
-                    this.ws.sendMessageToClient(installationId,JSON.stringify({ status: 'Adding global secrets' }));
-
-                    const org: string = await this.getOrganization(installationId);
-
-                    await this.addGlobalSecret({ secretName: "JF_URL", secretValue: platformUrl }, org);
-                    await this.addGlobalSecret({ secretName: "JF_TOKEN", secretValue: accessToken }, org);
-
-                    const { data: repositories } = await this.octokit.rest.apps.listReposAccessibleToInstallation({
-                        installation_id: installationId,
-                    });
-
-                    this.ws.sendMessageToClient(installationId,JSON.stringify({ status: 'Installing Frogbot' , total: repositories.repositories.length}));
-
-
-                    const results: InstallationResult[] = [];
-
-                    for (const repo of repositories.repositories) {
-                        const result = await this.frogbotService.installFrogbot(repo);
-                        this.ws.sendMessageToClient(installationId,JSON.stringify({ status: 'Frogbot installed'}));
-                        results.push(result);
-                    }
-                    return results;
-                } catch (error) {
-                    console.error('Error while handling installation:', error);
-                    return "the setup failed. please try again";
-                }
-            } else {
-                console.error('JFrog Xray is not connected.');
-                return 500;
+            const result: any = await jfrogClient.xray().system().ping();
+            if (result.status !== 'pong') {
+                throw new Error('Error when validating credentials');
             }
         } catch (error) {
-            console.error('Error while pinging JFrog Xray:', error);
-            return 500;
+            console.error('Error validating credentials:', error);
+            throw new Error(error.message);
         }
-}
+
+        // If credentials are valid, proceed with setting up
+        try {
+            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Adding global secrets' }));
+
+            const org: string = await this.getOrganization(installationId);
+            await this.addGlobalSecret({ secretName: "JF_URL", secretValue: platformUrl }, org);
+            await this.addGlobalSecret({ secretName: "JF_TOKEN", secretValue: accessToken }, org);
+
+            const { data: repositories } = await this.octokit.rest.apps.listReposAccessibleToInstallation({
+                installation_id: installationId,
+            });
+
+            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Installing Frogbot', total: repositories.repositories.length }));
+
+            const results: InstallationResult[] = [];
+            for (const repo of repositories.repositories) {
+                const result = await this.frogbotService.installFrogbot(repo);
+                this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Frogbot installed', repo: repo.name }));
+                results.push(result);
+            }
+
+            // Check if any installation resulted in an error
+            const isPartial: boolean = results.some(result => result.errormessage);
+
+            return { results, isPartial };
+        } catch (error) {
+            console.error('Error during setup:', error);
+            throw new Error('Error during setup');
+        }
+    }
+
 
     private async getOrganization(installationId: number) {
         const { data: installation } = await this.octokit.rest.apps.getInstallation({
             installation_id: installationId,
         });
-        return installation.account.name;
+         //@ts-ignore
+        return installation.account.login;
     };
 
     private async addGlobalSecret(secret: Secret, org: string): Promise<void> {
@@ -109,6 +101,4 @@ export class SetupService{
             return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL)
         });
     }
-
-
 }

@@ -33,10 +33,10 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
 
             await this.addFrogbotWorkflows(owner, repo.name, defaultBranch, sourceBranch);
            result.prLink = await this.openPullRequest(owner, repo.name, defaultBranch, sourceBranch);
-           return result;
         } catch (error) {
-            throw error;
+            result.errormessage = error.message;
         }
+        return result;
     }
 
      private async setUpFrogbotEnvironment(owner: string, repo: string) {
@@ -47,8 +47,6 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                  affiliation: 'direct',
                  permission: 'maintain',
              });
-
-             console.log(collaborators);
 
              const allTeamsResponse = await this.octokit.rest.teams.list({
                  org: owner,
@@ -62,32 +60,43 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                      repo,
                  });
                  if (permissionResponse.data.permissions.admin || permissionResponse.data.permissions.maintain) {
-                     return team.slug;
+                     return team;
                  }
                  return null;
              });
 
              // Await all promises and filter out null values
-             const teams = (await Promise.all(teamPromises)).filter((teamSlugs : string) => teamSlugs !== null).slice(0, 6);
+             const teams = (await Promise.all(teamPromises))
+                 .filter((team): team is NonNullable<typeof team> => team !== null)
+                 .slice(0, 6);
 
+             // Construct the reviewers array with correct types
+             const reviewers = [
+                 ...collaborators.data.map((collab) => ({
+                     type: 'User' as const,
+                     id: collab.id,
+                 })),
+                 ...teams.map((team) => ({
+                     type: 'Team' as const,
+                     id: team.id,
+                 })),
+             ].slice(0, 6);
+
+             // Create or update the environment with reviewers
              await this.octokit.rest.repos.createOrUpdateEnvironment({
                  owner,
                  repo,
                  environment_name: 'frogbot',
-                 protection_rules: {
-                     reviewers: [ ...teams,
-                         ...collaborators.data.map((collab) => collab.login),
-                     ].slice(0, 6),
-                 },
+                 reviewers,
              });
 
          } catch (error) {
-             console.error('Error creating Frogbot environment with reviewers:', error);
+             throw new Error('failed creating Frogbot environment with reviewers');
          }
      }
 
 
-    private async allowWorkflows(owner: string, repo: string) {
+     private async allowWorkflows(owner: string, repo: string) {
 
         try {
             await this.octokit.request(`PUT /repos/${owner}/${repo}/actions/permissions`, {
@@ -96,7 +105,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                 enabled: true,
             });
         } catch (error) {
-            throw error;
+            throw new Error("failed to enable workflows");
         }
     }
 
@@ -117,7 +126,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                 sha: latestCommitSha,
             });
         } catch (error) {
-            console.error('Error creating branch:', error);
+            throw new Error('failed to create branch');
         }
     }
 
@@ -142,19 +151,26 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                 }),
             ]);
         } catch (error) {
-            console.error('Error adding workflows:', error);
+            if(error.status === 421){
+                throw new Error('failed to add workflows, Frogbot already installed');
+            }
+            throw new Error('failed to add workflows');
         }
     }
 
     private async openPullRequest(owner: string, repo: string, defaultBranch: string, sourceBranch : string):Promise<string> {
-        const response = await this.octokit.rest.pulls.create({
-            owner,
-            repo,
-            head: sourceBranch,
-            base: defaultBranch,
-            title: PULL_REQUEST_DATA.prTitle,
-            body: PULL_REQUEST_DATA.comment,
-        });
-        return response.data.html_url;
+        try {
+            const response = await this.octokit.rest.pulls.create({
+                owner,
+                repo,
+                head: sourceBranch,
+                base: defaultBranch,
+                title: PULL_REQUEST_DATA.prTitle,
+                body: PULL_REQUEST_DATA.comment,
+            });
+            return response.data.html_url;
+        } catch (error) {
+            throw new Error('failed to open pull request');
+        }
     }
 }
