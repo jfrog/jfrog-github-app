@@ -47,8 +47,6 @@ export class SetupService{
                 this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Frogbot installed', repo: repo.name }));
                 results.push(result);
             }
-
-            // Check if any installation resulted in an error
             const isPartial: boolean = results.some(result => result.errorMessage);
 
             return { results, isPartial };

@@ -40,6 +40,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
     }
 
      private async setUpFrogbotEnvironment(owner: string, repo: string) {
+          const GITHUB_MAX_REVIEWERS = 6;
          try {
              const collaborators = await this.octokit.rest.repos.listCollaborators({
                  owner,
@@ -65,12 +66,10 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                  return null;
              });
 
-             // Await all promises and filter out null values
              const teams = (await Promise.all(teamPromises))
                  .filter((team): team is NonNullable<typeof team> => team !== null)
-                 .slice(0, 6);
+                 .slice(0, GITHUB_MAX_REVIEWERS);
 
-             // Construct the reviewers array with correct types
              const reviewers = [
                  ...collaborators.data.map((collab) => ({
                      type: 'User' as const,
@@ -80,9 +79,8 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                      type: 'Team' as const,
                      id: team.id,
                  })),
-             ].slice(0, 6);
+             ].slice(0, GITHUB_MAX_REVIEWERS);
 
-             // Create or update the environment with reviewers
              await this.octokit.rest.repos.createOrUpdateEnvironment({
                  owner,
                  repo,
