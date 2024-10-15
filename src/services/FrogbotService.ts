@@ -152,7 +152,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
             ]);
         } catch (error) {
             if(error.status === 422){
-                throw new Error('failed to add workflows, Frogbot config already exists!');
+                throw new Error('failed to add workflows, Frogbot configurations already exists!');
             }
             throw new Error('failed to add workflows');
         }
