@@ -17,3 +17,10 @@ export interface Secret {
     secretName: string;
     secretValue: string;
 }
+
+export enum InstallStages {
+    VALIDATING_CREDENTIALS = 'validating credentials',
+    ADDING_GLOBAL_SECRETS = 'Adding global secrets',
+    INSTALLING_FROGBOT = 'Installing Frogbot',
+    FROGBOT_INSTALLED = 'Frogbot installed',
+}

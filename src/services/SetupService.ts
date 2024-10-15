@@ -1,4 +1,4 @@
-import {InstallationResult, Secret} from "../utils/types.js";
+import {InstallationResult, InstallStages, Secret} from "../utils/types.js";
 import {Octokit} from "octokit";
 import sodium from 'libsodium-wrappers';
 import {JfrogClient} from "jfrog-client-js";
@@ -17,7 +17,7 @@ export class SetupService{
     }
 
     public async submitSetupForm(platformUrl: string, accessToken: string, installationId: number) {
-        this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'validating credentials' }));
+        this.ws.sendMessageToClient(installationId, JSON.stringify({ status:  InstallStages.VALIDATING_CREDENTIALS}));
         const jfrogClient = new JfrogClient({
             platformUrl,
             accessToken,
@@ -29,7 +29,7 @@ export class SetupService{
         }
 
         try {
-            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Adding global secrets' }));
+            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.ADDING_GLOBAL_SECRETS}));
 
             const org: string = await this.getOrganization(installationId);
             await this.addGlobalSecret({ secretName: "JF_URL", secretValue: platformUrl }, org);
@@ -39,12 +39,12 @@ export class SetupService{
                 installation_id: installationId,
             });
 
-            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Installing Frogbot', total: repositories.repositories.length }));
+            this.ws.sendMessageToClient(installationId, JSON.stringify({ status:  InstallStages.INSTALLING_FROGBOT, total: repositories.repositories.length }));
 
             const results: InstallationResult[] = [];
             for (const repo of repositories.repositories) {
                 const result = await this.frogbotService.installFrogbot(repo);
-                this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Frogbot installed', repo: repo.name }));
+                this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.FROGBOT_INSTALLED, repo: repo.name }));
                 results.push(result);
             }
             const isPartial: boolean = results.some(result => result.errorMessage);
