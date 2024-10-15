@@ -19,7 +19,7 @@ When the JFrog GitHub App is installed, it performs the following actions:
 
 - **Adds Global Secrets**: The app stores the **JFrog Access Token** and **Platform URL** in the organization's secrets.
 - **Enables Repository Workflows**: It allows the required workflows for each selected repository.
-- **Creates a Frogbot Environment**: A **Frogbot** environment is created automatically for public repositories.
+- **Creates a Frogbot Environment**: A **Frogbot** environment is created automatically for public repositories, with the maintainers of the repository as reviewers.
 - **Opens a Branch**: The app opens a branch to add Frogbot workflows for pull requests and CI pipelines.
 - **Creates a Pull Request**: A pull request with the required changes is automatically opened for Frogbot integration.
 
