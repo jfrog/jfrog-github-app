@@ -86,9 +86,9 @@ export class SetupService{
 
     private async encryptSecret(secret: string, publicKey: string): Promise<string> {
         return sodium.ready.then(() => {
-            let binaryKey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
-            let binarySecret = sodium.from_string(secret);
-            let encBytes = sodium.crypto_box_seal(binarySecret, binaryKey);
+            const binaryKey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
+            const binarySecret = sodium.from_string(secret);
+            const encBytes = sodium.crypto_box_seal(binarySecret, binaryKey);
             return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL)
         });
     }
