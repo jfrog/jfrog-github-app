@@ -97,10 +97,20 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
      private async allowWorkflows(owner: string, repo: string) {
 
         try {
+            await  this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsOrganization({
+                org:owner,
+                can_approve_pull_request_reviews: true,
+            })
             await this.octokit.request(`PUT /repos/${owner}/${repo}/actions/permissions`, {
                 owner,
                 repo,
                 enabled: true,
+                permissions: {
+                    actions: 'write',
+                    checks: 'write',
+                    contents: 'write',
+                    pull_requests: 'write'
+                }
             });
         } catch (error) {
             throw new Error("Failed to enable workflows");

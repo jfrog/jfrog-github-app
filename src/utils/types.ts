@@ -19,7 +19,7 @@ export interface Secret {
 }
 
 export enum InstallStages {
-    VALIDATING_CREDENTIALS = 'validating credentials',
+    VALIDATING_CREDENTIALS = 'Validating credentials',
     ADDING_GLOBAL_SECRETS = 'Adding global secrets',
     INSTALLING_FROGBOT = 'Installing Frogbot',
     FROGBOT_INSTALLED = 'Frogbot installed',
