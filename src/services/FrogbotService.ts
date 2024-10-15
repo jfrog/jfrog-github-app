@@ -34,7 +34,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
             await this.addFrogbotWorkflows(owner, repo.name, defaultBranch, sourceBranch);
            result.prLink = await this.openPullRequest(owner, repo.name, defaultBranch, sourceBranch);
         } catch (error) {
-            result.errormessage = error.message;
+            result.errorMessage = error.message;
         }
         return result;
     }
@@ -91,7 +91,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
              });
 
          } catch (error) {
-             throw new Error('failed creating Frogbot environment with reviewers');
+             throw new Error('Failed creating Frogbot environment with reviewers');
          }
      }
 
@@ -105,7 +105,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                 enabled: true,
             });
         } catch (error) {
-            throw new Error("failed to enable workflows");
+            throw new Error("Failed to enable workflows");
         }
     }
 
@@ -126,7 +126,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                 sha: latestCommitSha,
             });
         } catch (error) {
-            throw new Error('failed to create branch');
+            throw new Error('Failed to create branch');
         }
     }
 
@@ -151,8 +151,8 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
                 }),
             ]);
         } catch (error) {
-            if(error.status === 421){
-                throw new Error('failed to add workflows, Frogbot already installed');
+            if(error.status === 422){
+                throw new Error('failed to add workflows, Frogbot config already exists!');
             }
             throw new Error('failed to add workflows');
         }

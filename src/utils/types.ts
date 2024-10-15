@@ -9,7 +9,7 @@ export interface GitHubRepo {
 export interface InstallationResult{
     repoName: string;
     prLink?: string;
-    errormessage?: string;
+    errorMessage?: string;
     addedMaintainers?: string[];
 }
 

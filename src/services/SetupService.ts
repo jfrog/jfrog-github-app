@@ -18,24 +18,16 @@ export class SetupService{
 
     public async submitSetupForm(platformUrl: string, accessToken: string, installationId: number) {
         this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'validating credentials' }));
-
         const jfrogClient = new JfrogClient({
             platformUrl,
             accessToken,
         });
-
-        // Validate credentials by pinging the JFrog system
         try {
-            const result: any = await jfrogClient.xray().system().ping();
-            if (result.status !== 'pong') {
-                throw new Error('Error when validating credentials');
-            }
+             await jfrogClient.artifactory().system().version();
         } catch (error) {
-            console.error('Error validating credentials:', error);
-            throw new Error(error.message);
+            throw new Error("error validating credentials. Please make sure your credentials are correct");
         }
 
-        // If credentials are valid, proceed with setting up
         try {
             this.ws.sendMessageToClient(installationId, JSON.stringify({ status: 'Adding global secrets' }));
 
@@ -57,7 +49,7 @@ export class SetupService{
             }
 
             // Check if any installation resulted in an error
-            const isPartial: boolean = results.some(result => result.errormessage);
+            const isPartial: boolean = results.some(result => result.errorMessage);
 
             return { results, isPartial };
         } catch (error) {
@@ -78,7 +70,6 @@ export class SetupService{
     private async addGlobalSecret(secret: Secret, org: string): Promise<void> {
         const { data: publicKeyData } = await this.octokit.rest.actions.getOrgPublicKey({
             org,
-
         });
 
         const { key: publicKey, key_id: keyId } = publicKeyData;

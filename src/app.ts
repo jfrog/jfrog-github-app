@@ -55,7 +55,7 @@ expressServer.post('/submitForm', async (req: any, res: any) => {
   try {
     const setupService = new SetupService(await app.getInstallationOctokit(installationId), webSocketService);
     const response = await setupService.submitSetupForm(platformUrl, accessToken, installationId.toString());
-    response.isPartial ? res.status(206).send(response) : res.status(200).send(response);
+    response.isPartial ? res.status(206).send(response.results) : res.status(200).send(response.results);
   } catch (error) {
     res.status(500).send(error.message);
   }
