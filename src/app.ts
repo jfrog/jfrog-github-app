@@ -6,7 +6,6 @@ import express from 'express';
 import helmet from "helmet";
 import { createNodeMiddleware, EmitterWebhookEvent } from '@octokit/webhooks';
 import {FrogbotService} from "./services/FrogbotService.js";
-import {GitHubRepo} from "./utils/types.js";
 import {JFROG_APP_USER_NAME, webhookEvents} from "./utils/consts.js";
 import {WebSocketService} from './services/WebsocketService.js';
 import {SetupService} from "./services/SetupService.js";
