@@ -11,6 +11,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         this.octokit = octokit;
     }
 
+
     public async installFrogbot(repo: GitHubRepo): Promise<InstallationResult> {
         const result : InstallationResult = {
             repoName:repo.name,
@@ -26,7 +27,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
             const defaultBranch = repoData.default_branch;
 
             await Promise.all([
-                this.allowWorkflows(owner, repo.name),
+                this.allowWorkflowsOnRepo(owner, repo.name),
                 !repo.private ? this.setUpFrogbotEnvironment( owner, repo.name) : Promise.resolve(),
                 this.createBranch(owner, repo.name, defaultBranch, sourceBranch)
             ]);
@@ -93,26 +94,41 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
          }
      }
 
+     private async allowWorkflowsForOrg(owner: string,) {
+         await this.octokit.rest.actions.setGithubActionsPermissionsOrganization({
+             org: owner,
+             enabled_repositories: 'all',
+         });
 
-     private async allowWorkflows(owner: string, repo: string) {
+         await this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsOrganization({
+             org:owner,
+             can_approve_pull_request_reviews: true,
+             default_workflow_permissions: 'write'
+         });
+     }
 
+
+     private async allowWorkflowsOnRepo(owner: string, repo: string) {
         try {
-            await  this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsOrganization({
-                org:owner,
-                can_approve_pull_request_reviews: true,
-            })
-            await this.octokit.request(`PUT /repos/${owner}/${repo}/actions/permissions`, {
+
+            await this.allowWorkflowsForOrg(owner);
+
+            await this.octokit.rest.actions.setGithubActionsPermissionsRepository({
                 owner,
                 repo,
                 enabled: true,
-                permissions: {
-                    actions: 'write',
-                    checks: 'write',
-                    contents: 'write',
-                    pull_requests: 'write'
-                }
             });
+
+            await this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsRepository({
+                owner,
+                repo,
+                can_approve_pull_request_reviews: true,
+                default_workflow_permissions: 'write'
+            });
+
+
         } catch (error) {
+            console.log(error);
             throw new Error("Failed to enable workflows");
         }
     }

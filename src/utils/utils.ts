@@ -1,5 +1,5 @@
 export const pullRequestWorkflow = (): string => {
-    return `Name: Frogbot pull request scan"
+    return `name: Frogbot pull request scan"
 on:
   pull_request_target:
     types: [opened, synchronize]
