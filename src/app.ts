@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
-import http from 'http';
 import {App, Octokit} from 'octokit';
 import cors from 'cors';
 import express from 'express';
@@ -11,9 +10,10 @@ import {GitHubRepo} from "./utils/types.js";
 import {JFROG_APP_USER_NAME, webhookEvents} from "./utils/consts.js";
 import {WebSocketService} from './services/WebsocketService.js';
 import {SetupService} from "./services/SetupService.js";
+import {PostInstallationService} from "./services/PostInstallationService.js";
 
 
-//setup secrets and environment variables for server
+//Setup secrets and environment variables for server
 dotenv.config();
 const expressServer = express();
 const githubAppId: number = parseInt(process.env.APP_ID ?? '0', 0);
@@ -22,7 +22,6 @@ const privateKey: string = fs.readFileSync(privateKeyPath, 'utf8');
 const appWebhookSecret: string = process.env.WEBHOOK_SECRET as string;
 const port: number = parseInt(process.env.PORT || '3000', 10);
 const path = '/api/webhook';
-const localWebhookUrl = `http://localhost:${port}${path}`;
 const app = new App({
   appId:githubAppId,
   privateKey,
@@ -42,35 +41,21 @@ const webSocketService = new WebSocketService(5000);
 app.webhooks.on(webhookEvents.ADD_REPOSITORIES, async ({ payload }: EmitterWebhookEvent<webhookEvents.ADD_REPOSITORIES>) => {
   if (payload.action === "added" ) {
     const frogbotService = new FrogbotService(await app.getInstallationOctokit(payload.installation.id));
-    const installFrogbotPromises = payload.repositories_added.map((repo : GitHubRepo) => frogbotService.installFrogbot(repo));
-    try {
-      await Promise.all(installFrogbotPromises);
-    } catch (error) {
-    }
+    await frogbotService.installFrogbotMultiple(payload.repositories_added);
   }
 });
 
-app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWebhookEvent<any>): Promise<void> => {
-  console.log('hi')
+app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWebhookEvent<webhookEvents.MERGED_PULL_REQUEST>): Promise<void> => {
   if (payload.pull_request.merged && payload.pull_request.user.login === JFROG_APP_USER_NAME) {
    const octokit = new Octokit(app.getInstallationOctokit(payload.installation.id));
-    const owner = payload.repository.owner.login;
-    const repo = payload.repository.name;
-    const ref = payload.repository.default_branch;
+    const owner: string = payload.repository.owner.login;
+    const repo : string = payload.repository.name;
+    const defaultBranch : string = payload.repository.default_branch;
 
-    try {
-      await octokit.rest.actions.createWorkflowDispatch({
-        owner: owner,
-        repo: repo,
-        workflow_id: 'frogbot-scan-repository.yml',
-        ref: ref,
-      });
-      console.log("Workflow triggered successfully for the main branch");
-    } catch (error) {
-      console.error("Failed to trigger workflow:", error.message);
-    }
-  }
-});
+    const postInstallationService = new PostInstallationService(octokit);
+    await postInstallationService.finishUpInstallation(repo, owner, defaultBranch);
+}});
+
 
 expressServer.post('/submitForm', async (req: any, res: any) => {
   const { platformUrl, accessToken, installationId } = req.body;

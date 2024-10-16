@@ -17,39 +17,36 @@ export class SetupService{
     }
 
     public async submitSetupForm(platformUrl: string, accessToken: string, installationId: number) {
-        this.ws.sendMessageToClient(installationId, JSON.stringify({ status:  InstallStages.VALIDATING_CREDENTIALS}));
+        this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.VALIDATING_CREDENTIALS }));
+
         const jfrogClient = new JfrogClient({
             platformUrl,
             accessToken,
         });
+
         try {
-             await jfrogClient.artifactory().system().version();
+            await jfrogClient.artifactory().system().version();
         } catch (error) {
-            throw new Error("error validating credentials. Please make sure your credentials are correct");
+            throw new Error("Error validating credentials. Please make sure your credentials are correct");
         }
 
         try {
-            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.ADDING_GLOBAL_SECRETS}));
+            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.ADDING_GLOBAL_SECRETS }));
 
             const org: string = await this.getOrganization(installationId);
             await this.addGlobalSecret({ secretName: "JF_URL", secretValue: platformUrl }, org);
             await this.addGlobalSecret({ secretName: "JF_TOKEN", secretValue: accessToken }, org);
 
+            await this.allowWorkflowsForOrg(org);
+
             const { data: repositories } = await this.octokit.rest.apps.listReposAccessibleToInstallation({
                 installation_id: installationId,
             });
 
-            this.ws.sendMessageToClient(installationId, JSON.stringify({ status:  InstallStages.INSTALLING_FROGBOT, total: repositories.repositories.length }));
+            this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.INSTALLING_FROGBOT, total: repositories.repositories.length }));
 
-            const results: InstallationResult[] = [];
-            for (const repo of repositories.repositories) {
-                const result = await this.frogbotService.installFrogbot(repo);
-                this.ws.sendMessageToClient(installationId, JSON.stringify({ status: InstallStages.FROGBOT_INSTALLED, repo: repo.name }));
-                results.push(result);
-            }
-            const isPartial: boolean = results.some(result => result.errorMessage);
-
-            return { results, isPartial };
+            const response: { results: InstallationResult[], isPartial: boolean } = await this.frogbotService.installFrogbotMultiple(repositories.repositories, installationId, this.ws);
+            return response;
         } catch (error) {
             console.error('Error during setup:', error);
             throw new Error('Error during setup');
@@ -89,5 +86,24 @@ export class SetupService{
             const encBytes = sodium.crypto_box_seal(binarySecret, binaryKey);
             return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL)
         });
+    }
+
+    private async allowWorkflowsForOrg(owner: string) : Promise<void> {
+        try {
+            await Promise.all([
+                this.octokit.rest.actions.setGithubActionsPermissionsOrganization({
+                    org: owner,
+                    enabled_repositories: 'all',
+                }),
+                this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsOrganization({
+                    org: owner,
+                    can_approve_pull_request_reviews: true,
+                    default_workflow_permissions: 'write'
+                })
+            ]);
+        } catch (error) {
+            console.error(`Failed to enable workflows for organization ${owner}:`, error);
+            throw new Error(`Error enabling workflows for organization: ${error.message}`);
+        }
     }
 }

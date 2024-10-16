@@ -1,9 +1,10 @@
 
 import { Octokit } from 'octokit';
-import {GitHubRepo, InstallationResult} from "../utils/types.js";
+import {GitHubRepo, InstallationResult, InstallStages} from "../utils/types.js";
 import {PULL_REQUEST_DATA} from "../utils/consts.js";
 import { v4 as uuidv4 } from 'uuid';
 import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
+import {WebSocketService} from "./WebsocketService.js";
 
  export class FrogbotService {
     private readonly octokit: Octokit;
@@ -11,6 +12,22 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         this.octokit = octokit;
     }
 
+    public async installFrogbotMultiple(repos: GitHubRepo[], installationId?:number, websocket? : WebSocketService) {
+        const results: InstallationResult[] = [];
+        for (const repo of repos) {
+            const result = await this.installFrogbot(repo);
+            if(installationId && websocket) {
+                websocket.sendMessageToClient(installationId, JSON.stringify({
+                    status: InstallStages.FROGBOT_INSTALLED,
+                    repo: repo.name
+                }));
+            }
+            results.push(result);
+        }
+        const isPartial: boolean = results.some(result => result.errorMessage);
+
+        return { results, isPartial };
+    }
 
     public async installFrogbot(repo: GitHubRepo): Promise<InstallationResult> {
         const result : InstallationResult = {
@@ -40,7 +57,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         return result;
     }
 
-     private async setUpFrogbotEnvironment(owner: string, repo: string) {
+     private async setUpFrogbotEnvironment(owner: string, repo: string) : Promise<void> {
           const GITHUB_MAX_REVIEWERS = 6;
          try {
              const collaborators = await this.octokit.rest.repos.listCollaborators({
@@ -94,46 +111,30 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
          }
      }
 
-     private async allowWorkflowsForOrg(owner: string,) {
-         await this.octokit.rest.actions.setGithubActionsPermissionsOrganization({
-             org: owner,
-             enabled_repositories: 'all',
-         });
 
-         await this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsOrganization({
-             org:owner,
-             can_approve_pull_request_reviews: true,
-             default_workflow_permissions: 'write'
-         });
+     private async allowWorkflowsOnRepo(owner: string, repo: string): Promise<void> {
+         try {
+             await Promise.all([
+                 this.octokit.rest.actions.setGithubActionsPermissionsRepository({
+                     owner,
+                     repo,
+                     enabled: true,
+                 }),
+                 this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsRepository({
+                     owner,
+                     repo,
+                     can_approve_pull_request_reviews: true,
+                     default_workflow_permissions: 'write'
+                 })
+             ]);
+         } catch (error) {
+             console.log(error);
+             throw new Error("Failed to enable workflows");
+         }
      }
 
 
-     private async allowWorkflowsOnRepo(owner: string, repo: string) {
-        try {
-
-            await this.allowWorkflowsForOrg(owner);
-
-            await this.octokit.rest.actions.setGithubActionsPermissionsRepository({
-                owner,
-                repo,
-                enabled: true,
-            });
-
-            await this.octokit.rest.actions.setGithubActionsDefaultWorkflowPermissionsRepository({
-                owner,
-                repo,
-                can_approve_pull_request_reviews: true,
-                default_workflow_permissions: 'write'
-            });
-
-
-        } catch (error) {
-            console.log(error);
-            throw new Error("Failed to enable workflows");
-        }
-    }
-
-    private async createBranch(owner: string, repo: string, defaultBranch: string, sourceBranch : string) {
+     private async createBranch(owner: string, repo: string, defaultBranch: string, sourceBranch : string) : Promise<void> {
         try {
             const { data: refData } = await this.octokit.rest.git.getRef({
                 owner,
@@ -154,7 +155,7 @@ import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
         }
     }
 
-    private async addFrogbotWorkflows(owner: string, repo: string, defaultBranch: string, sourceBranch : string) {
+    private async addFrogbotWorkflows(owner: string, repo: string, defaultBranch: string, sourceBranch : string) : Promise<void> {
         try {
             await Promise.all([
                 this.octokit.rest.repos.createOrUpdateFileContents({
