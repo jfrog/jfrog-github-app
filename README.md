@@ -1,4 +1,4 @@
-# Welcome to the JFrog GitHub App!
+# Welcome to the JFrog GitHub App 🐸
 
 The **JFrog GitHub App** simplifies the process of integrating **Frogbot** into your organization's repositories. Follow the steps below to get started:
 
@@ -22,6 +22,13 @@ When the JFrog GitHub App is installed, it performs the following actions:
 - **Creates a Frogbot Environment**: A **Frogbot** environment is created automatically for public repositories, with the maintainers of the repository as reviewers.
 - **Opens a Branch**: The app opens a branch to add Frogbot workflows for pull requests and CI pipelines.
 - **Creates a Pull Request**: A pull request with the required changes is automatically opened for Frogbot integration.
+
+## Post-Installation
+
+After the pull request that adds the Frogbot configurations is merged, the JFrog GitHub App performs the following actions:
+
+- **Triggers the Scan Repository Workflow**: The app manually triggers the `scan-repository` workflow on the default branch of the repository.
+- **Triggers the Scan Pull Request Workflow**: It also triggers the `scan-pull-request` workflow on any open pull requests in the repository.
 
 ---
 
