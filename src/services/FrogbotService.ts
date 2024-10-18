@@ -57,10 +57,17 @@ import {WebSocketService} from "./WebsocketService.js";
         return result;
     }
 
-     private async setUpFrogbotEnvironment(owner: string, repo: string, isPublic: boolean) : Promise<void> {
+     private async setUpFrogbotEnvironment(owner: string, repo: string, isPrivate: boolean) : Promise<void> {
         const GITHUB_MAX_REVIEWERS = 6;
          try {
-             if(isPublic){
+             if(isPrivate) {
+                 await this.octokit.rest.repos.createOrUpdateEnvironment({
+                     owner,
+                     repo,
+                     environment_name: 'frogbot',
+                 });
+             }
+                 else{
                  const collaborators = await this.octokit.rest.repos.listCollaborators({
                  owner,
                  repo,
@@ -107,13 +114,6 @@ import {WebSocketService} from "./WebsocketService.js";
                  reviewers,
              });
          }
-         else{
-                await this.octokit.rest.repos.createOrUpdateEnvironment({
-                    owner,
-                    repo,
-                    environment_name: 'frogbot',
-                });
-            }
          } catch (error) {
              throw new Error('Failed creating Frogbot environment with reviewers');
          }
