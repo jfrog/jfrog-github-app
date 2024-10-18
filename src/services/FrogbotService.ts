@@ -45,7 +45,7 @@ import {WebSocketService} from "./WebsocketService.js";
 
             await Promise.all([
                 this.allowWorkflowsOnRepo(owner, repo.name),
-                !repo.private ? this.setUpFrogbotEnvironment( owner, repo.name) : Promise.resolve(),
+                this.setUpFrogbotEnvironment( owner, repo.name, repo.private),
                 this.createBranch(owner, repo.name, defaultBranch, sourceBranch)
             ]);
 
@@ -57,10 +57,11 @@ import {WebSocketService} from "./WebsocketService.js";
         return result;
     }
 
-     private async setUpFrogbotEnvironment(owner: string, repo: string) : Promise<void> {
-          const GITHUB_MAX_REVIEWERS = 6;
+     private async setUpFrogbotEnvironment(owner: string, repo: string, isPublic: boolean) : Promise<void> {
+        const GITHUB_MAX_REVIEWERS = 6;
          try {
-             const collaborators = await this.octokit.rest.repos.listCollaborators({
+             if(isPublic){
+                 const collaborators = await this.octokit.rest.repos.listCollaborators({
                  owner,
                  repo,
                  affiliation: 'direct',
@@ -105,7 +106,14 @@ import {WebSocketService} from "./WebsocketService.js";
                  environment_name: 'frogbot',
                  reviewers,
              });
-
+         }
+         else{
+                await this.octokit.rest.repos.createOrUpdateEnvironment({
+                    owner,
+                    repo,
+                    environment_name: 'frogbot',
+                });
+            }
          } catch (error) {
              throw new Error('Failed creating Frogbot environment with reviewers');
          }
