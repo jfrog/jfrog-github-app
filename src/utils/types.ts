@@ -13,6 +13,12 @@ export interface InstallationResult{
     addedMaintainers?: string[];
 }
 
+export interface AdvancedConfig {
+    isScanRepository: boolean;
+    isPullRequestScan: boolean;
+    mergeToDefaultBranch: boolean;
+}
+
 export interface Secret {
     secretName: string;
     secretValue: string;

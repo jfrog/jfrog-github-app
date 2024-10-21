@@ -1,4 +1,4 @@
-import {InstallationResult, InstallStages, Secret} from "../utils/types.js";
+import {AdvancedConfig, InstallationResult, InstallStages, Secret} from "../utils/types.js";
 import {Octokit} from "octokit";
 import sodium from 'libsodium-wrappers';
 import {JfrogClient} from "jfrog-client-js";
@@ -10,9 +10,9 @@ export class SetupService{
     private ws : WebSocketService;
     private frogbotService : FrogbotService;
 
-    constructor(octokit : Octokit, websocket : WebSocketService) {
+    constructor(octokit : Octokit, websocket : WebSocketService, advancedConfig? : AdvancedConfig) {
         this.octokit = octokit;
-        this.frogbotService = new FrogbotService(octokit);
+        this.frogbotService = new FrogbotService(octokit, advancedConfig);
         this.ws = websocket;
     }
 

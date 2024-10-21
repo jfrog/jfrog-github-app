@@ -1,6 +1,6 @@
 
 import { Octokit } from 'octokit';
-import {GitHubRepo, InstallationResult, InstallStages} from "../utils/types.js";
+import {AdvancedConfig, GitHubRepo, InstallationResult, InstallStages} from "../utils/types.js";
 import {PULL_REQUEST_DATA} from "../utils/consts.js";
 import { v4 as uuidv4 } from 'uuid';
 import {scanRepositoryWorkflow, pullRequestWorkflow} from "../utils/utils.js";
@@ -8,11 +8,13 @@ import {WebSocketService} from "./WebsocketService.js";
 
  export class FrogbotService {
     private readonly octokit: Octokit;
-    constructor(octokit : Octokit) {
+    private advancedConfig: AdvancedConfig;
+    constructor(octokit : Octokit, advancedConfig? : AdvancedConfig) {
         this.octokit = octokit;
+        this.advancedConfig = advancedConfig;
     }
 
-    public async installFrogbotMultiple(repos: GitHubRepo[], installationId?:number, websocket? : WebSocketService) {
+    public async installFrogbotMultiple(repos: GitHubRepo[], installationId?:number, websocket? : WebSocketService): Promise<{ results: InstallationResult[], isPartial: boolean }> {
         const results: InstallationResult[] = [];
         for (const repo of repos) {
             const result = await this.installFrogbot(repo);
@@ -165,26 +167,50 @@ import {WebSocketService} from "./WebsocketService.js";
 
     private async addFrogbotWorkflows(owner: string, repo: string, defaultBranch: string, sourceBranch : string) : Promise<void> {
         try {
-            await Promise.all([
-                this.octokit.rest.repos.createOrUpdateFileContents({
-                    owner,
-                    repo,
-                    path: '.github/workflows/frogbot-scan-repository.yml',
-                    message: `Added frogbot-scan-repository.yml on ${sourceBranch}`,
-                    content: Buffer.from(scanRepositoryWorkflow(defaultBranch)).toString('base64'),
-                    branch: sourceBranch,
-                }),
-                this.octokit.rest.repos.createOrUpdateFileContents({
-                    owner,
-                    repo,
-                    path: '.github/workflows/frogbot-scan-pull-request.yml',
-                    message: `Added frogbot-scan-pull-request.yml on ${sourceBranch}`,
-                    content: Buffer.from(pullRequestWorkflow()).toString('base64'),
-                    branch: sourceBranch
-                }),
-            ]);
+            if (this.advancedConfig) {
+                if (this.advancedConfig.isScanRepository) {
+                    await this.octokit.rest.repos.createOrUpdateFileContents({
+                        owner,
+                        repo,
+                        path: '.github/workflows/frogbot-scan-repository.yml',
+                        message: `Added frogbot-scan-repository.yml on ${sourceBranch}`,
+                        content: Buffer.from(scanRepositoryWorkflow(defaultBranch)).toString('base64'),
+                        branch: sourceBranch,
+                    });
+                }
+
+                if (this.advancedConfig.isPullRequestScan) {
+                    await this.octokit.rest.repos.createOrUpdateFileContents({
+                        owner,
+                        repo,
+                        path: '.github/workflows/frogbot-scan-pull-request.yml',
+                        message: `Added frogbot-scan-pull-request.yml on ${sourceBranch}`,
+                        content: Buffer.from(pullRequestWorkflow()).toString('base64'),
+                        branch: sourceBranch
+                    });
+                }
+            } else {
+                await Promise.all([
+                    this.octokit.rest.repos.createOrUpdateFileContents({
+                        owner,
+                        repo,
+                        path: '.github/workflows/frogbot-scan-repository.yml',
+                        message: `Added frogbot-scan-repository.yml on ${sourceBranch}`,
+                        content: Buffer.from(scanRepositoryWorkflow(defaultBranch)).toString('base64'),
+                        branch: sourceBranch,
+                    }),
+                    this.octokit.rest.repos.createOrUpdateFileContents({
+                        owner,
+                        repo,
+                        path: '.github/workflows/frogbot-scan-pull-request.yml',
+                        message: `Added frogbot-scan-pull-request.yml on ${sourceBranch}`,
+                        content: Buffer.from(pullRequestWorkflow()).toString('base64'),
+                        branch: sourceBranch
+                    }),
+                ]);
+            }
         } catch (error) {
-            if(error.status === 422){
+            if (error.status === 422) {
                 throw new Error('failed to add workflows, Frogbot configurations already exists!');
             }
             throw new Error('failed to add workflows');
@@ -201,6 +227,13 @@ import {WebSocketService} from "./WebsocketService.js";
                 title: PULL_REQUEST_DATA.prTitle,
                 body: PULL_REQUEST_DATA.comment,
             });
+            if (this.advancedConfig.mergeToDefaultBranch) {
+                await this.octokit.rest.pulls.merge({
+                    owner,
+                    repo,
+                    pull_number: response.data.number,
+                });
+            }
             return response.data.html_url;
         } catch (error) {
             throw new Error('failed to open pull request');

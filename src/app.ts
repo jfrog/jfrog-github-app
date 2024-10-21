@@ -57,9 +57,9 @@ app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWe
 
 
 expressServer.post('/submitForm', async (req: any, res: any) => {
-  const { platformUrl, accessToken, installationId } = req.body;
+  const { platformUrl, accessToken, installationId, advancedConfig } = req.body;
   try {
-    const setupService = new SetupService(await app.getInstallationOctokit(installationId), webSocketService);
+    const setupService = new SetupService(await app.getInstallationOctokit(installationId), webSocketService, advancedConfig);
     const response = await setupService.submitSetupForm(platformUrl, accessToken, installationId.toString());
     response.isPartial ? res.status(206).send(response.results) : res.status(200).send(response.results);
   } catch (error) {
