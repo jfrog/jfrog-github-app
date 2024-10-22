@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "start": "tsc -p ./ && node dist/app.js",
-    "build": "tsc -p ./"
+    "start": "tsc && cp message.md dist/message.md && node dist/app.js",
+    "build": "tsc && cp message.md dist/message.md"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
