@@ -14,7 +14,6 @@
   "devDependencies": {
     "@babel/core": "^7.25.8",
     "@babel/preset-env": "^7.25.8",
-    "@types/lodash": "^4.17.12",
     "@types/vue": "^1.0.31",
     "@vue/cli-plugin-typescript": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
@@ -23,9 +22,6 @@
     "style-loader": "^4.0.0",
     "typescript": "^5.6.3",
     "vue-loader": "^17.4.2",
-    "vue-template-compiler": "^2.7.16",
-    "webpack": "^5.95.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.1.0"
+    "vue-template-compiler": "^2.7.16"
   }
 }

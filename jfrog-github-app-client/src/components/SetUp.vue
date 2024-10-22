@@ -217,6 +217,12 @@ export default defineComponent({
             this.results = response.data;
             if (response.status === 206) {
               this.isPartialSuccess = true;
+              if(advancedConfig.mergeToDefaultBranch) {
+                this.finishedText = 'Some of the installs failed, but any successful ones have been merged, please contact support for help';
+              }
+              else {
+                this.finishedText = 'Some of the installs failed, but any successful ones have open pull requests, please approve any pull request and contact support for help';
+              }
               this.responseMessage = 'Some of the installs failed';
             } else {
               this.isPartialSuccess = false;

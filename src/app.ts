@@ -79,6 +79,10 @@ expressServer.post('/submitForm', async (req: any, res: any) => {
   }
 });
 
+expressServer.get('/isAlive', (req, res) => {
+    res.send(true);
+});
+
 expressServer.use(express.static(path.join(__dirname, '../jfrog-github-app-client/dist')));
 
 // Handle all other routes by serving index.html
