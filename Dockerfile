@@ -32,13 +32,11 @@ COPY --from=build /app/jfrog-github-app-client/dist ./jfrog-github-app-client/di
 # Copy the message.md file from the server directory into the /app directory
 COPY message.md ./
 
-# Copy the entire dist directory (if needed for other files)
 COPY dist ./
 
-# List files in the /app directory for debugging (optional)
 
 # Expose the port your server will run on
 EXPOSE 3000
 
 # Command to run your server
-CMD ["node", "app.js"]
+CMD ["node", "dist/app.js"]

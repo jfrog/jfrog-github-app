@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import { App, Octokit } from 'octokit';
 import cors from 'cors';
-import express from 'express';
+import express, {json} from 'express';
 import helmet from "helmet";
 import { createNodeMiddleware, EmitterWebhookEvent } from '@octokit/webhooks';
 import { FrogbotService } from "./services/FrogbotService.js";
@@ -22,14 +22,12 @@ dotenv.config();
 const expressServer = express();
 const port: number = parseInt(process.env.PORT || '3000', 10);
 
-// Middleware for GitHub webhook
 const githubAppId: number = parseInt(process.env.APP_ID ?? '0', 0);
 const privateKeyPath: string = process.env.PRIVATE_KEY_PATH as string;
-const privateKey: string = fs.readFileSync(privateKeyPath, 'utf8');
 const appWebhookSecret: string = process.env.WEBHOOK_SECRET as string;
 const app = new App({
     appId: githubAppId,
-    privateKey,
+    privateKey:privateKeyPath,
     webhooks: { secret: appWebhookSecret },
 });
 
@@ -44,7 +42,7 @@ expressServer.use(
         },
     })
 );
-
+expressServer.use(json());
 // Serve static files
 expressServer.use(express.static(path.join(__dirname, '../jfrog-github-app-client/dist')));
 expressServer.get('/form', (req, res) => {
@@ -79,6 +77,7 @@ app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWe
 
 // Listen for form submissions
 expressServer.post('/submitForm', async (req, res) => {
+    console.log(req);
     const { platformUrl, accessToken, installationId, advancedConfig } = req.body;
     try {
         const setupService = new SetupService(await app.getInstallationOctokit(installationId), webSocketService, advancedConfig);
