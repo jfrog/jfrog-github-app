@@ -92,8 +92,7 @@ expressServer.get('/form', (req, res) => {
 });
 
 
-expressServer.listen(port, () => {
-
-  console.log(`Express server listening on port ${port}`);
-  console.log(`Webhook URL: http://localhost:${port}${webhookPath}`);
+expressServer.listen(port, '0.0.0.0', () => {
+    console.log(`Express server listening on port ${port}`);
+    console.log(`Webhook URL: http://localhost:${port}${webhookPath}`);
 });
