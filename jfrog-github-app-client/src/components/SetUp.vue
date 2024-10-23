@@ -209,7 +209,7 @@ export default defineComponent({
             this.finishedText = "Almost finished! Please approve the pull request at every repository to have Frogbot installed";
           }
           try {
-            const response = await axios.post(`${serverUrl}/submitForm`, {
+            const response = await axios.post(`${this.serverUrl}/submitForm`, {
               accessToken: this.model.accessToken,
               platformUrl: this.model.platformUrl,
               installationId: this.installationId,
