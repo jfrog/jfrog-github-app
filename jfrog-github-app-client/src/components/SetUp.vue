@@ -127,6 +127,7 @@ export default defineComponent({
       responseMessage: '',
       percentage: 0,
       isToggled: false,
+      serverUrl: process.env.SERVER_URL || 'http://localhost:3000',
       pullRequestLinkText: 'PR to approve',
       isPartialSuccess: false,
       status: 'Loading',
@@ -151,7 +152,7 @@ export default defineComponent({
   },
   methods: {
     initWebSocket() {
-      this.ws = new WebSocket('ws://localhost:5000');
+      this.ws = new WebSocket(this.serverUrl.replace('http', 'ws'));
 
       this.ws.onopen = () => {
         this.ws?.send(JSON.stringify({clientId: this.installationId}));
@@ -208,7 +209,7 @@ export default defineComponent({
             this.finishedText = "Almost finished! Please approve the pull request at every repository to have Frogbot installed";
           }
           try {
-            const response = await axios.post('http://localhost:3000/submitForm', {
+            const response = await axios.post(`${serverUrl}/submitForm`, {
               accessToken: this.model.accessToken,
               platformUrl: this.model.platformUrl,
               installationId: this.installationId,
