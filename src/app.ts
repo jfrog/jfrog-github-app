@@ -24,10 +24,11 @@ const port: number = parseInt(process.env.PORT || '3000', 10);
 
 const githubAppId: number = parseInt(process.env.APP_ID ?? '0', 0);
 const privateKeyPath: string = process.env.PRIVATE_KEY_PATH as string;
+const privateKey: string = fs.readFileSync(privateKeyPath, 'utf-8');
 const appWebhookSecret: string = process.env.WEBHOOK_SECRET as string;
 const app = new App({
     appId: githubAppId,
-    privateKey:privateKeyPath,
+    privateKey,
     webhooks: { secret: appWebhookSecret },
 });
 

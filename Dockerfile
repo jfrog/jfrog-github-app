@@ -14,29 +14,22 @@ RUN npm install
 COPY jfrog-github-app-client ./
 RUN npm run build
 
-# Stage 2: Serve the Node.js server
-FROM node:18 AS production
-
 # Set the working directory for the server
 WORKDIR /app
-
 # Copy package.json and package-lock.json for the server
 COPY package*.json ./
 
 # Install only production dependencies
 RUN npm install --only=production
 
-# Copy the built Vue.js app from the build stage to the server directory
-COPY --from=build /app/jfrog-github-app-client/dist ./jfrog-github-app-client/dist
-
-# Copy the message.md file from the server directory into the /app directory
-COPY message.md ./
-
+# Copy the app.js file from the server directory into the /app/dist directory
 COPY dist ./
 
+# Copy any other necessary server files (like message.md)
+COPY message.md ./
 
 # Expose the port your server will run on
 EXPOSE 3000
 
-# Command to run your server
-CMD ["node", "dist/app.js"]
+# Command to run your server from the dist folder
+CMD ["node", "app.js"]
