@@ -127,7 +127,8 @@ export default defineComponent({
       responseMessage: '',
       percentage: 0,
       isToggled: false,
-      serverUrl: process.env.SERVER_URL || 'http://localhost:3000',
+
+      serverUrl: process.env.VUE_APP_SERVER_URL || 'http://localhost:3000',
       pullRequestLinkText: 'PR to approve',
       isPartialSuccess: false,
       status: 'Loading',
