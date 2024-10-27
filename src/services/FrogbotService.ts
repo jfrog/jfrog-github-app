@@ -227,7 +227,7 @@ import {WebSocketService} from "./WebsocketService.js";
                 title: PULL_REQUEST_DATA.prTitle,
                 body: PULL_REQUEST_DATA.comment,
             });
-            if (this.advancedConfig.mergeToDefaultBranch) {
+            if (this.advancedConfig?.mergeToDefaultBranch) {
                 await this.octokit.rest.pulls.merge({
                     owner,
                     repo,

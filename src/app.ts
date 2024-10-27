@@ -1,10 +1,9 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import { App, Octokit } from 'octokit';
-import cors from 'cors';
 import express, {json} from 'express';
 import helmet from "helmet";
-import { createNodeMiddleware, EmitterWebhookEvent } from '@octokit/webhooks';
+import {EmitterWebhookEvent } from '@octokit/webhooks';
 import { FrogbotService } from "./services/FrogbotService.js";
 import { JFROG_APP_USER_NAME, webhookEvents } from "./utils/consts.js";
 import { WebSocketService } from './services/WebsocketService.js';
@@ -12,7 +11,7 @@ import path, { dirname } from 'path';
 import { SetupService } from "./services/SetupService.js";
 import { PostInstallationService } from "./services/PostInstallationService.js";
 import { fileURLToPath } from 'url';
-import http from 'http'; // Import HTTP to create the server
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,6 +24,7 @@ const port: number = parseInt(process.env.PORT || '3000', 10);
 const githubAppId: number = parseInt(process.env.APP_ID ?? '0', 0);
 const privateKeyPath: string = process.env.PRIVATE_KEY_PATH as string;
 const privateKey: string = fs.readFileSync(privateKeyPath, 'utf-8');
+const webhookPath = '/webhooks';
 const appWebhookSecret: string = process.env.WEBHOOK_SECRET as string;
 const app = new App({
     appId: githubAppId,
@@ -32,7 +32,6 @@ const app = new App({
     webhooks: { secret: appWebhookSecret },
 });
 
-// Use helmet with WebSocket support
 expressServer.use(
     helmet({
         contentSecurityPolicy: {
@@ -44,19 +43,28 @@ expressServer.use(
     })
 );
 expressServer.use(json());
-// Serve static files
 expressServer.use(express.static(path.join(__dirname, '../jfrog-github-app-client/dist')));
 expressServer.get('/form', (req, res) => {
     res.sendFile(path.join(__dirname, '../jfrog-github-app-client/dist', 'index.html'));
 });
 
-// Create the HTTP server
+expressServer.post(webhookPath, express.json(), async (req, res) => {
+    try {
+        await app.webhooks.receive({
+            id: req.headers['x-github-delivery'] as string,
+            name: req.headers['x-github-event'] as any,
+            payload: req.body,
+        });
+        res.sendStatus(200);
+    } catch (error) {
+        console.error("Error handling webhook:", error);
+        res.sendStatus(500);
+    }
+});
 const httpServer = http.createServer(expressServer);
 
-// Initialize WebSocket service using the HTTP server
 const webSocketService = new WebSocketService(httpServer);
 
-// Handle Webhook events
 app.webhooks.on(webhookEvents.ADD_REPOSITORIES, async ({ payload }: EmitterWebhookEvent<webhookEvents.ADD_REPOSITORIES>) => {
     if (payload.action === "added") {
         const frogbotService = new FrogbotService(await app.getInstallationOctokit(payload.installation.id));
@@ -70,13 +78,11 @@ app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWe
         const owner = payload.repository.owner.login;
         const repo = payload.repository.name;
         const defaultBranch = payload.repository.default_branch;
-
         const postInstallationService = new PostInstallationService(octokit);
         await postInstallationService.finishUpInstallation(repo, owner, defaultBranch);
     }
 });
 
-// Listen for form submissions
 expressServer.post('/submitForm', async (req, res) => {
     console.log(req);
     const { platformUrl, accessToken, installationId, advancedConfig } = req.body;
@@ -89,12 +95,10 @@ expressServer.post('/submitForm', async (req, res) => {
     }
 });
 
-// Health check route
 expressServer.get('/isAlive', (req, res) => {
     res.send(true);
 });
 
-// Start the HTTP & WebSocket server
 httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Server is running on http://localhost:${port}`);
     console.log(`WebSocket server is running on ws://localhost:${port}`);
