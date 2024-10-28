@@ -4,7 +4,7 @@ The **JFrog GitHub App** simplifies the process of integrating **Frogbot** into 
 
 ## Getting Started
 
-1. **Install the App**: Go to the [GitHub Marketplace](#) and install the JFrog GitHub App.
+1. **Install the App**: Go to the [GitHub Marketplace](https://github.com/marketplace/snyk) and install the JFrog GitHub App.
 2. **Select Repositories**: Choose the repositories where Frogbot should be added.
 3. **Complete the Setup Form**: Fill out the form with your **JFrog Platform URL** and **Access Token**.
 4. **Approve Pull Requests**: Review and approve the pull requests created for each repository.
