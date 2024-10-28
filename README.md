@@ -25,6 +25,12 @@ When the JFrog GitHub App is installed, it performs the following actions:
 - **Opens a Branch**: The app opens a branch to add Frogbot workflows for pull requests and CI pipelines.
 - **Creates a Pull Request**: A pull request with the required changes is automatically opened for Frogbot integration. If the "Merge to default branch" option is selected, the changes will be merged automatically.
 
+
+## Post-Installation
+
+After the pull request that adds the Frogbot configurations is merged, the JFrog GitHub App performs the following actions:
+
+- **Triggers the Scan Repository Workflow**: The app manually triggers the `scan-repository` workflow on the default branch of the repository.
 ---
 
 Thank you for using the **JFrog GitHub App**! We're excited to help streamline your repository management with Frogbot.
