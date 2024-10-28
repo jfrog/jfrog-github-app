@@ -10,7 +10,7 @@ export class PostInstallationService {
     public async finishUpInstallation(repo: string, owner: string, defaultBranch: string): Promise<void> {
         await Promise.all([
             this.runScanRepository(owner, repo, defaultBranch),
-            this.runScanPullRequest(owner, repo)
+            // this.runScanPullRequest(owner, repo)
         ]);
     }
 

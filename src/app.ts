@@ -61,6 +61,7 @@ expressServer.post(webhookPath, express.json(), async (req, res) => {
         res.sendStatus(500);
     }
 });
+
 const httpServer = http.createServer(expressServer);
 
 const webSocketService = new WebSocketService(httpServer);
@@ -74,7 +75,7 @@ app.webhooks.on(webhookEvents.ADD_REPOSITORIES, async ({ payload }: EmitterWebho
 
 app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWebhookEvent<webhookEvents.MERGED_PULL_REQUEST>) => {
     if (payload.pull_request.merged && payload.pull_request.user.login === JFROG_APP_USER_NAME) {
-        const octokit = new Octokit(await app.getInstallationOctokit(payload.installation.id));
+        const octokit = await app.getInstallationOctokit(payload.installation.id);
         const owner = payload.repository.owner.login;
         const repo = payload.repository.name;
         const defaultBranch = payload.repository.default_branch;
@@ -84,7 +85,6 @@ app.webhooks.on(webhookEvents.MERGED_PULL_REQUEST, async ({ payload }: EmitterWe
 });
 
 expressServer.post('/submitForm', async (req, res) => {
-    console.log(req);
     const { platformUrl, accessToken, installationId, advancedConfig } = req.body;
     try {
         const setupService = new SetupService(await app.getInstallationOctokit(installationId), webSocketService, advancedConfig);

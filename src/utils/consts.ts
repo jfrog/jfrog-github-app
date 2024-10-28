@@ -12,4 +12,4 @@ export enum webhookEvents {
     MERGED_PULL_REQUEST = "pull_request.closed",
 }
 
-export const JFROG_APP_USER_NAME = 'jfrog-demo-app-v2[bot]';
+export const JFROG_APP_USER_NAME = 'jfrog-app[bot]';

@@ -24,6 +24,7 @@ export const scanRepositoryWorkflow = (defaultBranch: string): string => {
 on:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -44,3 +45,4 @@ jobs:
           JF_GIT_TOKEN: \${{ secrets.GITHUB_TOKEN }}
           JF_GIT_BASE_BRANCH: \${{ matrix.branch }}`;
 }
+
