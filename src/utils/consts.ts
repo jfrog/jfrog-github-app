@@ -9,5 +9,7 @@ export const PULL_REQUEST_DATA = {
 
 export enum webhookEvents {
     ADD_REPOSITORIES = "installation_repositories",
-    INSTALL_APP = "installation",
+    MERGED_PULL_REQUEST = "pull_request.closed",
 }
+
+export const JFROG_APP_USER_NAME = 'jfrog-app[bot]';
